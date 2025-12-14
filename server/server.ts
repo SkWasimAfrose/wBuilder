@@ -45,11 +45,6 @@ app.get('/', (req, res) => {
 });
 
 // Start the server [1]
-// Start the server [1]
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`Server is running at localhost:${PORT}`);
-  });
-}
-
-export default app;
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
