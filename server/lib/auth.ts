@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth"; // [1]
 import { prismaAdapter } from "better-auth/adapters/prisma"; // [2]
-import prisma from "./prisma.js"; // [2]
+import { prisma } from "./prisma.js"; // [2]
 import "dotenv/config"; // [3]
 
 // Parse trusted origins from environment variables to allow cross-origin requests
