@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'; // [1]
 import Stripe from 'stripe'; // [2]
-import prisma from '../lib/prisma.js'; // [3]
+import { prisma } from '../lib/prisma.js'; // [3]
 
 // Initialize Stripe with the Secret Key
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string); // [4]

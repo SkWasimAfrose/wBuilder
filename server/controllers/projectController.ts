@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'; // [1]
-import prisma from '../lib/prisma.js'; // [2]
+import { prisma } from '../lib/prisma.js'; // [2]
 import openai from '../config/openai.js'; // [2]
 
 // Note: The actual prompt text is stored in an assets file in the source video.

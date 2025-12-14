@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'; // [1]
-import prisma from '../lib/prisma.js'; // [2]
+import { prisma } from '../lib/prisma.js'; // [2]
 import openai from '../config/openai.js'; // [3]
 import Stripe from 'stripe'; // [4]
 
