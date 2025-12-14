@@ -1,0 +1,57 @@
+
+> client@0.0.0 lint
+> eslint .
+
+
+C:\Users\wasim\Desktop\wBuilder\client\src\components\EditorPanel.tsx
+  17:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  29:22  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\wasim\Desktop\wBuilder\client\src\components\Navbar.tsx
+  23:21  error  Unexpected any. Specify a different type                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               @typescript-eslint/no-explicit-any
+  32:7   error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+C:\Users\wasim\Desktop\wBuilder\client\src\components\Navbar.tsx:32:7
+  30 |   useEffect(() => {
+  31 |     if (session?.user) {
+> 32 |       getCredits();
+     |       ^^^^^^^^^^ Avoid calling setState() directly within an effect
+  33 |     }
+  34 |   }, [session]);
+  35 |  react-hooks/set-state-in-effect
+
+C:\Users\wasim\Desktop\wBuilder\client\src\components\ProjectPreview.tsx
+  23:60  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  64:36  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\wasim\Desktop\wBuilder\client\src\components\Sidebar.tsx
+   2:24  error  'MessageSquare' is defined but never used  @typescript-eslint/no-unused-vars
+   2:51  error  'X' is defined but never used              @typescript-eslint/no-unused-vars
+  32:21  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  64:21  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+  86:21  error  Unexpected any. Specify a different type   @typescript-eslint/no-explicit-any
+
+C:\Users\wasim\Desktop\wBuilder\client\src\pages\MyProjects.tsx
+  23:32  error  'projectId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\wasim\Desktop\wBuilder\client\src\pages\Preview.tsx
+  39:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+C:\Users\wasim\Desktop\wBuilder\client\src\pages\Pricing.tsx
+  17:33  error  'planId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\wasim\Desktop\wBuilder\client\src\pages\Projects.tsx
+  20:20  error    'setIsSaving' is assigned a value but never used                                                                       @typescript-eslint/no-unused-vars
+  49:5   warning  React Hook React.useEffect has a missing dependency: 'fetchProject'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\Users\wasim\Desktop\wBuilder\client\src\pages\View.tsx
+  20:23  error  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+Γ£û 17 problems (16 errors, 1 warning)
+
