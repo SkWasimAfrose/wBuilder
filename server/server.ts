@@ -31,7 +31,7 @@ app.post(
 app.use(express.json({ limit: "50mb" }));
 
 // Better Auth Handler [3]
-app.all("/api/auth/:path*", toNodeHandler(auth));
+app.all("/api/auth/*", toNodeHandler(auth));
 
 // User API Routes [4]
 app.use("/api/user", userRouter);
