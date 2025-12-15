@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
 // @ts-ignore
-import { auth } from "../../firebase";
+import { auth, db } from "../../firebase";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -23,6 +24,13 @@ export default function AuthPage() {
         navigate("/");
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        // Create user document in Firestore
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          email: userCredential.user.email,
+          credits: 20,
+          createdAt: new Date().toISOString() // Using ISO string for consistency
+        });
+
         if (name) {
           await updateProfile(userCredential.user, {
             displayName: name

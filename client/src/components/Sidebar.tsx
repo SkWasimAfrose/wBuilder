@@ -4,6 +4,10 @@ import type { Project, Message, Version } from '../types'; // [5], [6]
 import { Link } from 'react-router-dom'; // [3]
 import { toast } from 'sonner'; // [7]
 import API from '../config/api'; // [8]
+import { useUser } from '../context/UserContext';
+import { updateDoc, increment, doc } from 'firebase/firestore';
+// @ts-ignore
+import { db } from '../firebase';
 
 interface SidebarProps {
   project: Project;
@@ -36,10 +40,17 @@ const Sidebar = ({ project, setProject, isGenerating, setIsGenerating, isMenuOpe
   //   }
   // };
 
+  const { user } = useUser();
+
   // Handler for submitting a new revision prompt [8], [7]
   const handleRevision = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isGenerating) return;
+
+    if (!user || (user.credits || 0) < 5) {
+        toast.error("Insufficient credits. You need 5 credits to generate code.");
+        return;
+    }
 
     setIsGenerating(true);
     const userMessage = input;
@@ -121,6 +132,13 @@ const Sidebar = ({ project, setProject, isGenerating, setIsGenerating, isMenuOpe
       });
 
       toast.success("Code updated successfully");
+      
+      // Deduct credits
+      if (user) {
+          await updateDoc(doc(db, "users", user.uid), {
+             credits: increment(-5)
+          });
+      }
 
     } catch (error: any) { 
       console.error(error);

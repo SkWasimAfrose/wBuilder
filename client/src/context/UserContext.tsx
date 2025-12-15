@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { type User, onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, onSnapshot } from "firebase/firestore";
 // @ts-ignore
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
 
 interface UserContextType {
-  user: User | null;
+  user: any | null;
   loading: boolean;
   logout: () => Promise<void>;
 }
@@ -12,15 +13,39 @@ interface UserContextType {
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
+    let unsubscribeFirestore: (() => void) | null = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      if (unsubscribeFirestore) {
+        unsubscribeFirestore();
+        unsubscribeFirestore = null;
+      }
+
+      if (currentUser) {
+        // Subscribe to user document for credits
+        const userRef = doc(db, "users", currentUser.uid);
+        unsubscribeFirestore = onSnapshot(userRef, (docSnap) => {
+           if (docSnap.exists()) {
+             const userData = docSnap.data();
+             setUser({ ...currentUser, ...userData });
+           } else {
+             setUser(currentUser);
+           }
+           setLoading(false);
+        });
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
     });
-    return () => unsubscribe();
+    return () => {
+      unsubscribeAuth();
+      if (unsubscribeFirestore) unsubscribeFirestore();
+    };
   }, []);
 
   const logout = async () => {

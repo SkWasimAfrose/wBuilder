@@ -2,7 +2,9 @@ import React from 'react'
 import type { Project } from '../types';
 import { Loader2Icon,} from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { dummyProjects } from '../assets/assets';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+// @ts-ignore
+import { db } from '../firebase';
 import Footer from '../components/Footer';
 
 const Community = () => {
@@ -11,13 +13,26 @@ const Community = () => {
   const navigate = useNavigate();
 
   const fetchProjects = async () => {
-    // In a real app, you might fetch from an API
-    setProjects(dummyProjects);
-
-    // Simulated loading
-    setTimeout(() => {
+    try {
+      const q = query(
+        collection(db, "projects"), 
+        where("isPublished", "==", true)
+      );
+      const querySnapshot = await getDocs(q);
+      const fetchedProjects = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString()
+        } as Project;
+      });
+      setProjects(fetchedProjects);
+    } catch (error) {
+      console.error(error);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   }
 
   React.useEffect(() => {
