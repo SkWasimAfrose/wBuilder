@@ -31,8 +31,13 @@ export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL, // [4]
   secret: process.env.BETTER_AUTH_SECRET, // [1]
 
-  // Advanced Cookie Settings for Production vs Development
+  // Advanced Cookie Settings for Cross-Origin Support
   advanced: {
+    // Default cookie attributes for ALL cookies (cross-domain support)
+    defaultCookieAttributes: {
+      sameSite: "none", // Required for cross-origin cookies
+      secure: true, // Required when sameSite is "none"
+    },
     cookies: {
       sessionToken: {
         attributes: {
