@@ -21,7 +21,7 @@ export default function AuthPage() {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
-        navigate("/");
+        navigate("/projects");
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         // Create user document in Firestore
@@ -36,7 +36,7 @@ export default function AuthPage() {
             displayName: name
           });
         }
-        navigate("/");
+        navigate("/projects");
       }
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
