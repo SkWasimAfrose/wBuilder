@@ -2,31 +2,69 @@ import React from 'react'
 import type { Project } from '../types';
 import { Loader2Icon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { dummyProjects } from '../assets/assets';
 import Footer from '../components/Footer';
+import { useUser } from '../context/UserContext';
+import { collection, deleteDoc, doc, getDocs, orderBy, query, where } from 'firebase/firestore';
+// @ts-ignore
+import { db } from '../firebase';
+import { toast } from 'sonner';
 
 const MyProjects = () => {
   const [loading, setLoading] = React.useState(true);
   const [projects, setProjects] = React.useState<Project[]>([]);
   const navigate = useNavigate();
+  const { user } = useUser();
 
   const fetchProjects = async () => {
-    // In a real app, you might fetch from an API
-    setProjects(dummyProjects);
-
-    // Simulated loading
-    setTimeout(() => {
+    if (!user) return;
+    try {
+      setLoading(true);
+      const q = query(
+        collection(db, "projects"), 
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc")
+      );
+      const querySnapshot = await getDocs(q);
+      const fetchedProjects = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Convert Firestore Timestamp to string for UI
+          createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+          updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : new Date().toISOString(),
+        } as Project;
+      });
+      setProjects(fetchedProjects);
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to fetch projects");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   }
 
-  const deleteProject = async (_projectId:string) => {
-    
+  const deleteProject = async (projectId: string) => {
+    try {
+      await deleteDoc(doc(db, "projects", projectId));
+      setProjects(prev => prev.filter(p => p.id !== projectId));
+      toast.success("Project deleted");
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to delete project");
+    }
   }
 
   React.useEffect(() => {
-    fetchProjects();
-  }, []);
+    if (user) {
+      fetchProjects();
+    } else {
+       // If no user, maybe stop loading or wait? 
+       // If not logged in, Navbar shows "Get Started". 
+       // This page might be protected or show empty.
+       setLoading(false);
+    }
+  }, [user]);
   return (
     <>
     <div className='px=4 md:px-16 lg:px-24 xl:px-32'>

@@ -1,18 +1,65 @@
 import React from 'react'
 import { Loader2Icon } from 'lucide-react'
+import { useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
+import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+// @ts-ignore
+import { db } from '../firebase';
+import { toast } from 'sonner';
 
 export const Home = () => {
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const navigate = useNavigate();
+  const { user } = useUser();
 
   const onSubmitHandler = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!user) {
+      toast.error("Please login to create a project");
+      navigate('/auth');
+      return;
+    }
     setLoading(true);
-    console.log(input);
-    setTimeout(() => {
+    
+    try {
+      const initialCode = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${input}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="p-8 bg-white rounded-lg shadow-xl">
+        <h1 class="text-3xl font-bold text-gray-800 mb-4">Hello World</h1>
+        <p class="text-gray-600">This is a starter template for: ${input}</p>
+    </div>
+</body>
+</html>`;
+
+      const docRef = await addDoc(collection(db, "projects"), {
+        userId: user.uid,
+        name: input.split(' ').slice(0, 4).join(' ') || "Untitled Project",
+        initialPrompt: input,
+        currentCode: initialCode,
+        isPublished: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        versions: [],
+        conversation: []
+      });
+
+      navigate(`/projects/${docRef.id}`);
+    } catch (error: any) {
+      console.error(error);
+      toast.error("Failed to create project");
+    } finally {
       setLoading(false);
-    }, 3000);
+    }
   }
+
   return (
       <section className="flex flex-col items-center text-white text-sm pb-20 px-4 font-poppins">
     
@@ -34,7 +81,7 @@ export const Home = () => {
 
         <form onSubmit={onSubmitHandler} className="bg-white/10 max-w-2xl w-full rounded-xl p-4 mt-10 border border-indigo-600/70 focus-within:ring-2 ring-indigo-500 transition-all">
           <textarea onChange={e => setInput(e.target.value)} className="bg-transparent outline-none text-gray-300 resize-none w-full" rows={4} placeholder="Describe your presentation in details" required />
-          <button className="ml-auto flex items-center gap-2 bg-gradient-to-r from-[#CB52D4] to-indigo-600 rounded-md px-4 py-2">
+          <button className="ml-auto flex items-center gap-2 bg-gradient-to-r from-[#CB52D4] to-indigo-600 rounded-md px-4 py-2" disabled={loading}>
             {!loading ? 'Create with AI' : (
               <>
               Creating... <Loader2Icon className="animate-spin size-4 text-white" />

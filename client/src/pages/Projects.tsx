@@ -2,13 +2,18 @@ import React, { useRef } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import type { Project } from '../types'
 import { Loader2Icon, MessagesSquareIcon, SmartphoneIcon, TabletIcon, XIcon, LaptopIcon, SaveIcon, FullscreenIcon, ArrowBigDownDashIcon, EyeOffIcon, EyeIcon } from 'lucide-react'
-import { dummyConversations, dummyProjects, dummyVersion } from '../assets/assets'
 import Sidebar from '../components/Sidebar'
 import ProjectPreview, { type ProjectPreviewRef } from '../components/ProjectPreview'
+import { doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
+// @ts-ignore
+import { db } from '../firebase'
+import { toast } from 'sonner'
+// import { useUser } from '../context/UserContext'
 
 const Projects = () => {
   const {projectId} = useParams()
   const navigate = useNavigate()
+  // const { user } = useUser()
 
   const [project, setProject] = React.useState<Project | null>(null)
   const [loading, setLoading] = React.useState(true)
@@ -22,31 +27,74 @@ const Projects = () => {
   const previewRef = useRef<ProjectPreviewRef>(null)
 
   const fetchProject = async () => {
-    const project = dummyProjects.find((project) => project.id === projectId)
-    setTimeout(()=>{
-      if(project){
-        setProject({...project, conversation: dummyConversations, versions: dummyVersion});
+    if (!projectId) return;
+    try {
+      const docRef = doc(db, "projects", projectId)
+      const docSnap = await getDoc(docRef)
+      
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const fetchedProject = {
+            id: docSnap.id,
+            ...data,
+            createdAt: data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+            updatedAt: data.updatedAt?.toDate ? data.updatedAt.toDate().toISOString() : new Date().toISOString(),
+        } as Project;
+
+        setProject(fetchedProject);
         setLoading(false)
-        setIsGenerating(project.currentCode ? false : true)
+        setIsGenerating(fetchedProject.currentCode ? false : true)
+      } else {
+        toast.error("Project not found")
+        navigate('/projects')
       }
-    }, 2000)
+    } catch (error) {
+      console.error(error)
+      toast.error("Failed to load project")
+      setLoading(false)
+    }
   }
 
   const saveProject = async () => {
-    
+    if (!project || !projectId) return;
+    _setIsSaving(true);
+    try {
+        await updateDoc(doc(db, "projects", projectId), {
+            // Note: In a real app we'd capture the code from the editor/previewRef
+            // For now assuming project.currentCode is kept in sync or we just update existing fields
+            // The Ref might supply the current code if we impl that.
+            updatedAt: serverTimestamp()
+        });
+        toast.success("Project saved");
+    } catch (error) {
+        toast.error("Failed to save");
+    } finally {
+        _setIsSaving(false);
+    }
   }
 
   const downloadCode = () => {
-    
+    // Implement download logic if needed
   }
 
   const togglePublish = async () => {
-    
+    if (!project || !projectId) return;
+    try {
+        const newStatus = !project.isPublished;
+        await updateDoc(doc(db, "projects", projectId), {
+            isPublished: newStatus,
+            updatedAt: serverTimestamp()
+        });
+        setProject(prev => prev ? {...prev, isPublished: newStatus} : null);
+        toast.success(newStatus ? "Project published" : "Project unpublished");
+    } catch (error) {
+        toast.error("Failed to update publish status");
+    }
   }
 
   React.useEffect(() => {
     fetchProject()
-  },[])
+  },[projectId])
 
   if (loading) {
     return <>

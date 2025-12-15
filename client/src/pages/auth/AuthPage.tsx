@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signIn, signUp } from "../../lib/auth-client";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
+// @ts-ignore
+import { auth } from "../../firebase";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -17,34 +19,16 @@ export default function AuthPage() {
     setLoading(true);
     try {
       if (isLogin) {
-        await signIn.email({ 
-            email, 
-            password,
-            callbackURL: "/"
-        }, {
-            onSuccess: () => {
-                navigate("/");
-            },
-            onError: (ctx) => {
-                toast.error(ctx.error.message);
-                setLoading(false);
-            }
-        });
+        await signInWithEmailAndPassword(auth, email, password);
+        navigate("/");
       } else {
-        await signUp.email({ 
-            email, 
-            password, 
-            name,
-            callbackURL: "/"
-        }, {
-             onSuccess: () => {
-                navigate("/");
-            },
-            onError: (ctx) => {
-                toast.error(ctx.error.message);
-                setLoading(false);
-            }
-        });
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        if (name) {
+          await updateProfile(userCredential.user, {
+            displayName: name
+          });
+        }
+        navigate("/");
       }
     } catch (error: any) {
       toast.error(error.message || "An error occurred");
