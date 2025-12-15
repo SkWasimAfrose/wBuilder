@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react'; // [3]
 import { toast } from 'sonner'; // [1]
-import API from '../config/api'; // [1]
+import { doc, getDoc } from 'firebase/firestore';
+// @ts-ignore
+import { db } from '../firebase';
 import ProjectPreview from '../components/ProjectPreview'; // [3]
 import type { Project } from '../types'; // [4]
 
@@ -14,8 +16,20 @@ const View = () => {
   useEffect(() => {
     const fetchCode = async () => {
       try {
-        const { data } = await API.get(`/api/project/published/${projectId}`); // [1]
-        setCode(data.code);
+        if (!projectId) return;
+        const docRef = doc(db, "projects", projectId);
+        const docSnap = await getDoc(docRef);
+
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.isPublished) {
+                setCode(data.currentCode);
+            } else {
+                toast.error("Project is not published");
+            }
+        } else {
+            toast.error("Project not found");
+        }
         setLoading(false);
       } catch (error) {
         setLoading(false);

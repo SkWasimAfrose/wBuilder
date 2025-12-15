@@ -3,9 +3,8 @@ import { Bot, Loader2, Send, User, Eye } from 'lucide-react'; // [1], [2], [3], 
 import type { Project, Message, Version } from '../types'; // [5], [6]
 import { Link } from 'react-router-dom'; // [3]
 import { toast } from 'sonner'; // [7]
-import API from '../config/api'; // [8]
 import { useUser } from '../context/UserContext';
-import { updateDoc, increment, doc } from 'firebase/firestore';
+import { updateDoc, increment, doc, serverTimestamp } from 'firebase/firestore';
 // @ts-ignore
 import { db } from '../firebase';
 
@@ -28,17 +27,7 @@ const Sidebar = ({ project, setProject, isGenerating, setIsGenerating, isMenuOpe
     }
   }, [project.conversation.length, isGenerating]);
 
-  // Function to fetch project updates during polling [12]
-  // Function to fetch project updates during polling [12]
-  // const fetchProject = async () => {
-  //   try {
-  //     const { data } = await API.get(`/api/user/project/${project.id}`);
-  //     setProject(data.project);
-  //   } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-  //     console.log(error);
-  //     toast.error("Failed to refresh project");
-  //   }
-  // };
+
 
   const { user } = useUser();
 
@@ -151,23 +140,38 @@ const Sidebar = ({ project, setProject, isGenerating, setIsGenerating, isMenuOpe
   };
 
   // Handler to rollback to a previous version [13], [14]
+  // Handler to rollback to a previous version [13], [14]
   const handleRollback = async (versionId: string) => {
     const confirm = window.confirm("Are you sure you want to rollback to this version?");
     if (!confirm) return;
 
     setIsGenerating(true);
     try {
-      const { data } = await API.get(`/api/project/rollback/${project.id}/${versionId}`);
-      toast.success(data.message);
+      const targetVersion = project.versions.find(v => v.id === versionId);
+      if (!targetVersion) {
+         toast.error("Version not found");
+         setIsGenerating(false);
+         return;
+      }
+
+      await updateDoc(doc(db, "projects", project.id), {
+          currentCode: targetVersion.code,
+          currentVersionId: targetVersion.id,
+          updatedAt: serverTimestamp()
+      });
       
-      // Refresh project data immediately after rollback
-      const { data: projectData } = await API.get(`/api/user/project/${project.id}`);
-      setProject(projectData.project);
+      setProject({
+          ...project,
+          currentCode: targetVersion.code,
+          currentVersionId: targetVersion.id
+      });
       
+      toast.success("Rolled back to version");
       setIsGenerating(false);
-    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error(error);
       setIsGenerating(false);
-      toast.error(error.response?.data?.message || "Failed to rollback");
+      toast.error("Failed to rollback");
     }
   };
 

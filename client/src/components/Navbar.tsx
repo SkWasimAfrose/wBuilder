@@ -1,41 +1,20 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { assets } from '../assets/assets';
 import { Link, useNavigate } from 'react-router-dom'; 
 import { useUser } from '../context/UserContext';
 import { Menu, X } from 'lucide-react'; 
-import API from '../config/api'; 
 // import { toast } from 'sonner'; 
 
 const Navbar = () => {
   const navigate = useNavigate(); 
   const [openMenu, setOpenMenu] = useState(false); 
-  const [credits, setCredits] = useState(0); 
   
   const { user, logout } = useUser();
-
-  // Function to fetch user credits 
-  const getCredits = async () => {
-    try {
-      // NOTE: This API call might need adjustment if it relies on cookies/headers that have changed.
-      const { data } = await API.get('/api/user/credits');
-      setCredits(data.credits);
-    } catch (error: any) {
-      console.log(error);
-      // toast.error(error.message || "Failed to load credits");
-    }
-  };
 
   const handleSignOut = async () => {
     await logout();
     navigate('/');
   };
-
-  // Fetch credits whenever the user session is active 
-  useEffect(() => {
-    if (user) {
-      void getCredits();
-    }
-  }, [user]);
 
   return (
     <nav className="flex items-center justify-between py-3 px-6 md:px-12 lg:px-20 bg-black/20 backdrop-blur-md sticky top-0 z-50 border-b border-white/10"> 
@@ -65,7 +44,7 @@ const Navbar = () => {
           <div className="flex items-center gap-4">
             <button className="flex items-center gap-2 bg-gray-800/50 hover:bg-gray-800 border border-gray-700 rounded-full px-4 py-1.5 text-xs text-gray-300 transition-all">
               Credits: 
-              <span className="text-indigo-400 font-semibold text-sm">{credits}</span> 
+              <span className="text-indigo-400 font-semibold text-sm">{user.credits || 0}</span> 
             </button>
             {/* User Profile Button */}
             <div className="flex items-center gap-2">
@@ -129,7 +108,7 @@ const Navbar = () => {
             {user ? (
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm text-gray-300">
-                  Credits: <span className="text-indigo-400">{credits}</span>
+                  Credits: <span className="text-indigo-400">{user.credits || 0}</span>
                 </div>
                 <div className="flex items-center gap-2">
                      {user.photoURL && <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full" />}

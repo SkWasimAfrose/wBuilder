@@ -3,7 +3,9 @@ import { useParams } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import { useUser } from '../context/UserContext';
 import { toast } from 'sonner';
-import API from '../config/api';
+import { doc, getDoc } from 'firebase/firestore';
+// @ts-ignore
+import { db } from '../firebase';
 import ProjectPreview from '../components/ProjectPreview';
 import type { Project, Version } from '../types';
 
@@ -21,10 +23,17 @@ const Preview = () => {
       if (!user && !authLoading) return; 
 
       try {
-        const { data } = await API.get(`/api/project/preview/${projectId}`); 
+        if (!projectId) return;
+        const docRef = doc(db, "projects", projectId);
+        const docSnap = await getDoc(docRef);
         
-        // Check if we are viewing a specific version or the current project
-        const project = data.project;
+        if (!docSnap.exists()) {
+             toast.error("Project not found");
+             setLoading(false);
+             return;
+        }
+
+        const project = docSnap.data() as Project;
         let displayCode = project.currentCode; 
 
         if (versionId) {
