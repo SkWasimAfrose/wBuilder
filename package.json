@@ -1,0 +1,25 @@
+{
+  "name": "wbuilder",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SkWasimAfrose/wBuilder.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/SkWasimAfrose/wBuilder/issues"
+  },
+  "homepage": "https://github.com/SkWasimAfrose/wBuilder#readme",
+  "dependencies": {
+    "ai": "^5.0.113",
+    "openai": "^6.13.0"
+  }
+}

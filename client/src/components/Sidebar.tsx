@@ -25,15 +25,16 @@ const Sidebar = ({ project, setProject, isGenerating, setIsGenerating, isMenuOpe
   }, [project.conversation.length, isGenerating]);
 
   // Function to fetch project updates during polling [12]
-  const fetchProject = async () => {
-    try {
-      const { data } = await API.get(`/api/user/project/${project.id}`);
-      setProject(data.project);
-    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-      console.log(error);
-      toast.error("Failed to refresh project");
-    }
-  };
+  // Function to fetch project updates during polling [12]
+  // const fetchProject = async () => {
+  //   try {
+  //     const { data } = await API.get(`/api/user/project/${project.id}`);
+  //     setProject(data.project);
+  //   } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+  //     console.log(error);
+  //     toast.error("Failed to refresh project");
+  //   }
+  // };
 
   // Handler for submitting a new revision prompt [8], [7]
   const handleRevision = async (e: React.FormEvent) => {
@@ -41,30 +42,93 @@ const Sidebar = ({ project, setProject, isGenerating, setIsGenerating, isMenuOpe
     if (!input.trim() || isGenerating) return;
 
     setIsGenerating(true);
-    let interval: number | undefined;
+    const userMessage = input;
+    setInput('');
+
+    // Optimistically add user message to conversation
+    const optimisticMessage: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: userMessage,
+        timestamp: new Date().toISOString(),
+        projectId: project.id
+    };
+    
+    setProject({
+        ...project,
+        conversation: [...project.conversation, optimisticMessage]
+    });
 
     try {
-      // Optimistic update or wait for polling
-      const { data } = await API.post(`/api/project/revision/${project.id}`, {
-        message: input
+      const response = await fetch('/api/revise', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+              prompt: userMessage,
+              currentCode: project.currentCode
+          }),
       });
-      
-      toast.success(data.message);
-      setInput('');
 
-      // Poll for updates every 10 seconds until the generation is complete
-      interval = window.setInterval(fetchProject, 10000);
+      if (!response.ok) {
+          throw new Error(response.statusText);
+      }
 
-      // In a real scenario, you might want a condition to clear this interval based on backend status
-      // For this demo context, we usually clear it when the component unmounts or manually
-      
-      // Note: The transcript simplifies this by just calling fetchProject in an interval.
-      // Logic for clearing interval would typically depend on specific backend flags (e.g., isGenerating false).
-      
-    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      // Handle streaming response
+      const data = response.body;
+      if (!data) return;
+
+      const reader = data.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let streamedCode = '';
+
+      while (!done) {
+          const { value, done: doneReading } = await reader.read();
+          done = doneReading;
+          const chunkValue = decoder.decode(value);
+          streamedCode += chunkValue;
+          
+          // Here you could update a "Live Preview" or similar if you wanted to see code stream in.
+          // For now, we wait until it finishes to update the project structure properly or update 
+          // a temporary "streaming" state if we had one.
+      }
+
+      // After streaming is complete, create a new version and update project
+      const newVersion: Version = {
+          id: Date.now().toString(), // Simple ID generation
+          code: streamedCode,
+          description: `Revision: ${userMessage.slice(0, 30)}...`,
+          timestamp: new Date().toISOString(),
+          projectId: project.id
+      };
+
+      const assistantMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: "I've updated the code based on your request.",
+          timestamp: new Date().toISOString(),
+          projectId: project.id
+      };
+
+      setProject({
+          ...project,
+          currentCode: streamedCode,
+          currentVersionId: newVersion.id,
+          versions: [...project.versions, newVersion],
+          conversation: [...project.conversation, optimisticMessage, assistantMessage]
+      });
+
+      toast.success("Code updated successfully");
+
+    } catch (error: any) { 
+      console.error(error);
       setIsGenerating(false);
-      toast.error(error.response?.data?.message || "Something went wrong");
-      if (interval) clearInterval(interval);
+      toast.error("Something went wrong");
+      // Revert optimistic update if needed, or simply leave the user message there with an error toast.
+    } finally {
+        setIsGenerating(false);
     }
   };
 
