@@ -2,7 +2,7 @@ import React from 'react'
 import { Loader2Icon } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 // @ts-ignore
 import { db } from '../firebase';
 import { toast } from 'sonner';
@@ -20,35 +20,62 @@ export const Home = () => {
       navigate('/auth');
       return;
     }
+
+    // Step 1: Credit Check
+    if ((user.credits || 0) < 5) {
+      toast.error("Insufficient credits. You need 5 credits to generate a website.");
+      return;
+    }
+
     setLoading(true);
+    let generatedCode = "";
     
     try {
-      const initialCode = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${input}</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
-    <div class="p-8 bg-white rounded-lg shadow-xl">
-        <h1 class="text-3xl font-bold text-gray-800 mb-4">Hello World</h1>
-        <p class="text-gray-600">This is a starter template for: ${input}</p>
-    </div>
-</body>
-</html>`;
+      // Step 2: AI Generation (Edge Function)
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: input }),
+      });
 
+      if (!response.ok) {
+        throw new Error("Failed to generate code");
+      }
+
+      if (!response.body) {
+        throw new Error("No response body");
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        generatedCode += chunk;
+      }
+
+      // Step 3: Save & Deduct (Post-Generation)
+      // Save Project
       const docRef = await addDoc(collection(db, "projects"), {
         userId: user.uid,
         name: input.split(' ').slice(0, 4).join(' ') || "Untitled Project",
-        initialPrompt: input,
-        currentCode: initialCode,
+        prompt: input, // Spec calls it 'prompt'
+        code: generatedCode,
         isPublished: false,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         versions: [],
         conversation: []
+      });
+
+      // Deduct Credits
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, {
+        credits: increment(-5)
       });
 
       navigate(`/projects/${docRef.id}`);

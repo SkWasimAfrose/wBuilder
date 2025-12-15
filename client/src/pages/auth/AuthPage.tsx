@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 // @ts-ignore
 import { auth, db } from "../../firebase";
 import { toast } from "sonner";
@@ -28,7 +28,7 @@ export default function AuthPage() {
         await setDoc(doc(db, "users", userCredential.user.uid), {
           email: userCredential.user.email,
           credits: 20,
-          createdAt: new Date().toISOString() // Using ISO string for consistency
+          createdAt: serverTimestamp()
         });
 
         if (name) {
