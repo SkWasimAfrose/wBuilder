@@ -1,68 +1,91 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, onSnapshot } from "firebase/firestore";
-// @ts-ignore
-import { auth, db } from "../firebase";
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { 
+  onAuthStateChanged, 
+  User as FirebaseUser 
+} from 'firebase/auth';
+import { 
+  doc, 
+  onSnapshot 
+} from 'firebase/firestore';
+import { auth, db } from '../firebase'; // Ensure path to firebase.js is correct
+
+interface UserData {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+  credits: number;
+}
 
 interface UserContextType {
-  user: any | null;
+  user: UserData | null;
   loading: boolean;
   logout: () => Promise<void>;
 }
 
-const UserContext = createContext<UserContextType | undefined>(undefined);
+const UserContext = createContext<UserContextType>({
+  user: null,
+  loading: true,
+  logout: async () => {},
+});
 
-export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<any | null>(null);
+export const useUser = () => useContext(UserContext);
+
+export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let unsubscribeFirestore: (() => void) | null = null;
-
-    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
-      if (unsubscribeFirestore) {
-        unsubscribeFirestore();
-        unsubscribeFirestore = null;
-      }
-
-      if (currentUser) {
-        // Subscribe to user document for credits
-        const userRef = doc(db, "users", currentUser.uid);
-        unsubscribeFirestore = onSnapshot(userRef, (docSnap) => {
-           if (docSnap.exists()) {
-             const userData = docSnap.data();
-             setUser({ ...currentUser, ...userData });
-           } else {
-             setUser(currentUser);
-           }
-           setLoading(false);
-        });
-      } else {
+    // 1. Listen for Auth Changes (Login/Logout)
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!firebaseUser) {
         setUser(null);
         setLoading(false);
+        return;
       }
+
+      // 2. If Logged In, Listen to Database for Credits
+      const userDocRef = doc(db, 'users', firebaseUser.uid);
+      
+      const unsubscribeSnapshot = onSnapshot(userDocRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            credits: data.credits || 0, // REAL-TIME CREDITS
+          });
+        } else {
+          // Fallback if doc doesn't exist yet
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+            credits: 0,
+          });
+        }
+        setLoading(false);
+      }, (error) => {
+        console.error("Database Error:", error);
+        setLoading(false);
+      });
+
+      return () => unsubscribeSnapshot();
     });
-    return () => {
-      unsubscribeAuth();
-      if (unsubscribeFirestore) unsubscribeFirestore();
-    };
+
+    return () => unsubscribeAuth();
   }, []);
 
   const logout = async () => {
-    await signOut(auth);
+    await auth.signOut();
   };
 
   return (
     <UserContext.Provider value={{ user, loading, logout }}>
-      {children}
+      {!loading && children}
     </UserContext.Provider>
   );
-};
-
-export const useUser = () => {
-  const context = useContext(UserContext);
-  if (!context) {
-    throw new Error("useUser must be used within a UserProvider");
-  }
-  return context;
 };
